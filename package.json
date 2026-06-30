@@ -12,7 +12,7 @@
     "electron": "concurrently \"cross-env BROWSER=none npm run dev\" \"electron .\"",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
-  },
+  }, 
   "dependencies": {
     "pdfjs-dist": "^6.0.227",
     "react": "^19.2.6",
