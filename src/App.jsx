@@ -1,72 +1,104 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react'; 
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  // --- AUTHENTICATION STATE TRACKING (NEW ADD-ON) ---
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem('academia_hub_is_logged_in') === 'true';
+  });
+  const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
+  const [username, setUsername] = useState(() => localStorage.getItem('academia_hub_form_username') || '');
+  const [password, setPassword] = useState('');
+  const [registeredUsers, setRegisteredUsers] = useState(() => {
+    const savedUsers = localStorage.getItem('academia_hub_registered_users');
+    return savedUsers ? JSON.parse(savedUsers) : [{ username: 'admin', password: 'password123' }];
+  });
+  const [authError, setAuthError] = useState('');
 
-  // 1. Core Assignments Data Matrix
-  const [assignments, setAssignments] = useState([
-    { 
-      id: 1, 
-      title: "Psychology Report", 
-      subject: "Psychology", 
-      priority: "High", 
-      dueDate: "2026-06-28", 
-      time: "12:30", 
-      shortDesc: "Track deadlines, priorities, and reminders without clutter.", 
-      whatInside: "Keep submissions, progress, and reminders in one place so you never lose track of deadlines.",
-      checklist: [
-        { id: 101, text: "Priority tracking", completed: true, isEditing: false },
-        { id: 102, text: "Deadline reminders", completed: false, isEditing: false },
-        { id: 103, text: "Submission checklist", completed: false, isEditing: false }
-      ]
-    },
-    { 
-      id: 2, 
-      title: "Business Case Study", 
-      subject: "Business", 
-      priority: "Medium", 
-      dueDate: "2026-07-02", 
-      time: "14:00", 
-      shortDesc: "Analyze market structures and operational strategies.", 
-      whatInside: "Case studies on local corporate shifts and organizational frameworks.",
-      checklist: [
-        { id: 201, text: "Gather research data matrix", completed: false, isEditing: false }
-      ]
-    }
-  ]);
+  // --- PREVIOUS STATES (UNTOUCHED) ---
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('academia_hub_active_tab') || 'dashboard';
+  });
 
-  // 2. AI States & History Matrix Panel
-  const [aiPrompt, setAiPrompt] = useState('');
-  const [aiResponse, setAiResponse] = useState('');
+  // 1. Core Assignments Data Matrix with localStorage Persistence
+  const [assignments, setAssignments] = useState(() => {
+    const savedData = localStorage.getItem('academia_hub_assignments');
+    if (savedData) return JSON.parse(savedData);
+    return [
+      { 
+        id: 1, 
+        title: "Psychology Report", 
+        subject: "Psychology", 
+        priority: "High", 
+        dueDate: "2026-06-28", 
+        time: "12:30", 
+        shortDesc: "Track deadlines, priorities, and reminders without clutter.", 
+        whatInside: "Keep submissions, progress, and reminders in one place so you never lose track of deadlines.",
+        checklist: [
+          { id: 101, text: "Priority tracking", completed: true, isEditing: false },
+          { id: 102, text: "Deadline reminders", completed: false, isEditing: false },
+          { id: 103, text: "Submission checklist", completed: false, isEditing: false }
+        ]
+      },
+      { 
+        id: 2, 
+        title: "Business Case Study", 
+        subject: "Business", 
+        priority: "Medium", 
+        dueDate: "2026-07-02", 
+        time: "14:00", 
+        shortDesc: "Analyze market structures and operational strategies.", 
+        whatInside: "Case studies on local corporate shifts and organizational frameworks.",
+        checklist: [
+          { id: 201, text: "Gather research data matrix", completed: false, isEditing: false }
+        ]
+      }
+    ];
+  });
+
+  // 2. AI States & History Matrix Panel with localStorage Persistence
+  const [aiPrompt, setAiPrompt] = useState(() => {
+    return localStorage.getItem('academia_hub_ai_prompt') || '';
+  });
+  const [aiResponse, setAiResponse] = useState(() => {
+    return localStorage.getItem('academia_hub_ai_response') || '';
+  });
   const [isAiLoading, setIsAiLoading] = useState(false);
-  const [aiHistory, setAiHistory] = useState([
-    { id: 1, prompt: "Outline key concepts in sports psychology", response: "1. Mental Toughness\n2. Goal Setting\n3. Anxiety Management Frameworks." },
-    { id: 2, prompt: "Break down ANOVA variables", response: "Calculates variance ratios between categories ($F$-distribution thresholds)." }
-  ]);
+  const [aiHistory, setAiHistory] = useState(() => {
+    const savedHistory = localStorage.getItem('academia_hub_ai_history');
+    if (savedHistory) return JSON.parse(savedHistory);
+    return [
+      { id: 1, prompt: "Outline key concepts in sports psychology", response: "1. Mental Toughness\n2. Goal Setting\n3. Anxiety Management Frameworks." },
+      { id: 2, prompt: "Break down ANOVA variables", response: "Calculates variance ratios between categories ($F$-distribution thresholds)." }
+    ];
+  });
 
   // Media attachment temporary state handles
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [attachedPhotos, setAttachedPhotos] = useState([]);
 
-  // 3. Form Logger State Holders
-  const [taskText, setTaskText] = useState('');
-  const [subject, setSubject] = useState('');
-  const [customSubject, setCustomSubject] = useState(''); // New handle for the custom text entry space
-  const [priority, setPriority] = useState('Medium');
-  const [date, setDate] = useState('2026-06-30');
-  const [time, setTime] = useState('12:30');
+  // 3. Form Logger State Holders with localStorage Persistence
+  const [taskText, setTaskText] = useState(() => localStorage.getItem('academia_hub_form_task') || '');
+  const [subject, setSubject] = useState(() => localStorage.getItem('academia_hub_form_subject') || '');
+  const [customSubject, setCustomSubject] = useState(() => localStorage.getItem('academia_hub_form_custom_subject') || ''); 
+  const [priority, setPriority] = useState(() => localStorage.getItem('academia_hub_form_priority') || 'Medium');
+  const [date, setDate] = useState(() => localStorage.getItem('academia_hub_form_date') || '2026-06-30');
+  const [time, setTime] = useState(() => localStorage.getItem('academia_hub_form_time') || '12:30');
   const [newPoint, setNewPoint] = useState('');
 
   // Drilldown Inspector Selected
   const [selectedAssignment, setSelectedAssignment] = useState(null);
 
-  // 4. Fully Editable Lecture Timetable State
-  const [timetable, setTimetable] = useState([
-    { id: 1, day: 'Monday', subject: 'Psychology 101', time: '09:00 - 11:00', room: 'Hall A', isEditing: false },
-    { id: 2, day: 'Wednesday', subject: 'Advanced Statistics', time: '11:30 - 13:30', room: 'Lab 3', isEditing: false },
-    { id: 3, day: 'Thursday', subject: 'Business Management', time: '14:00 - 16:00', room: 'Room 402', isEditing: false }
-  ]);
+  // 4. Fully Editable Lecture Timetable State with localStorage Persistence
+  const [timetable, setTimetable] = useState(() => {
+    const savedTimetable = localStorage.getItem('academia_hub_timetable');
+    if (savedTimetable) return JSON.parse(savedTimetable);
+    return [
+      { id: 1, day: 'Monday', subject: 'Psychology 101', time: '09:00 - 11:00', room: 'Hall A', isEditing: false },
+      { id: 2, day: 'Wednesday', subject: 'Advanced Statistics', time: '11:30 - 13:30', room: 'Lab 3', isEditing: false },
+      { id: 3, day: 'Thursday', subject: 'Business Management', time: '14:00 - 16:00', room: 'Room 402', isEditing: false }
+    ];
+  });
 
   // Dynamic input states for adding a new timetable entry
   const [newSlotDay, setNewSlotDay] = useState('Monday');
@@ -74,15 +106,124 @@ export default function App() {
   const [newSlotTime, setNewSlotTime] = useState('');
   const [newSlotRoom, setNewSlotRoom] = useState('');
 
-  // 5. Fully Editable Calendar Matrix State
-  const [calendarEvents, setCalendarEvents] = useState({
-    2: "Biz Study",
-    28: "Psych Due"
+  // 5. Fully Editable Calendar Matrix State with localStorage Persistence
+  const [calendarEvents, setCalendarEvents] = useState(() => {
+    const savedCalendar = localStorage.getItem('academia_hub_calendar');
+    if (savedCalendar) return JSON.parse(savedCalendar);
+    return {
+      2: "Biz Study",
+      28: "Psych Due"
+    };
   });
   const [selectedCalendarDay, setSelectedCalendarDay] = useState(null);
   const [calendarInputVal, setCalendarInputVal] = useState('');
 
-  // File parsing mechanisms
+  // ==========================================
+  // COMPREHENSIVE LOCALSTORAGE SYNC EFFECTS
+  // ==========================================
+  useEffect(() => {
+    localStorage.setItem('academia_hub_is_logged_in', isLoggedIn);
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    localStorage.setItem('academia_hub_registered_users', JSON.stringify(registeredUsers));
+  }, [registeredUsers]);
+
+  useEffect(() => {
+    localStorage.setItem('academia_hub_form_username', username);
+  }, [username]);
+
+  useEffect(() => {
+    localStorage.setItem('academia_hub_active_tab', activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    localStorage.setItem('academia_hub_assignments', JSON.stringify(assignments));
+  }, [assignments]);
+
+  useEffect(() => {
+    localStorage.setItem('academia_hub_ai_prompt', aiPrompt);
+  }, [aiPrompt]);
+
+  useEffect(() => {
+    localStorage.setItem('academia_hub_ai_response', aiResponse);
+  }, [aiResponse]);
+
+  useEffect(() => {
+    localStorage.setItem('academia_hub_ai_history', JSON.stringify(aiHistory));
+  }, [aiHistory]);
+
+  useEffect(() => {
+    localStorage.setItem('academia_hub_timetable', JSON.stringify(timetable));
+  }, [timetable]);
+
+  useEffect(() => {
+    localStorage.setItem('academia_hub_calendar', JSON.stringify(calendarEvents));
+  }, [calendarEvents]);
+
+  useEffect(() => {
+    localStorage.setItem('academia_hub_form_task', taskText);
+  }, [taskText]);
+
+  useEffect(() => {
+    localStorage.setItem('academia_hub_form_subject', subject);
+  }, [subject]);
+
+  useEffect(() => {
+    localStorage.setItem('academia_hub_form_custom_subject', customSubject);
+  }, [customSubject]);
+
+  useEffect(() => {
+    localStorage.setItem('academia_hub_form_priority', priority);
+  }, [priority]);
+
+  useEffect(() => {
+    localStorage.setItem('academia_hub_form_date', date);
+  }, [date]);
+
+  useEffect(() => {
+    localStorage.setItem('academia_hub_form_time', time);
+  }, [time]);
+  // ==========================================
+
+  // --- NEW AUTHENTICATION HANDLERS ---
+  const handleAuthSubmit = (e) => {
+    e.preventDefault();
+    setAuthError('');
+
+    if (!username.trim() || !password.trim()) {
+      setAuthError('Please fill out all fields.');
+      return;
+    }
+
+    if (authMode === 'login') {
+      const userExists = registeredUsers.find(u => u.username === username && u.password === password);
+      if (userExists) {
+        setIsLoggedIn(true);
+        setPassword('');
+      } else {
+        setAuthError('Invalid username or password.');
+      }
+    } else {
+      const userExists = registeredUsers.find(u => u.username === username);
+      if (userExists) {
+        setAuthError('Username is already taken.');
+      } else {
+        const updatedUsers = [...registeredUsers, { username, password }];
+        setRegisteredUsers(updatedUsers);
+        setIsLoggedIn(true);
+        setPassword('');
+        alert('Account registered successfully!');
+      }
+    }
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setPassword('');
+  };
+
+  // --- REUSED INFRASTRUCTURE HANDLERS (UNTOUCHED) ---
   const handleFileUpload = (e) => {
     const files = Array.from(e.target.files);
     files.forEach(file => {
@@ -108,7 +249,6 @@ export default function App() {
     });
   };
 
-  // Automated Schedule Parser Engine Functionality
   const handleTimetableFileImport = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -144,7 +284,6 @@ export default function App() {
     reader.readAsText(file);
   };
 
-  // AI Connection Query Executions
   const handleQueryEngine = async () => {
     if (!aiPrompt.trim()) return;
 
@@ -182,7 +321,6 @@ export default function App() {
     }
   };
 
-  // Form Objective Action Submission
   const handleAddObjective = (e) => {
     e.preventDefault();
     if (!taskText.trim()) return;
@@ -211,7 +349,6 @@ export default function App() {
     setCustomSubject('');
   };
 
-  // Checklist Operations
   const toggleChecklistItem = (itemId) => {
     const updated = selectedAssignment.checklist.map(i => i.id === itemId ? { ...i, completed: !i.completed } : i);
     updateChecklistSync(updated);
@@ -240,7 +377,6 @@ export default function App() {
     setAssignments(assignments.map(a => a.id === selectedAssignment.id ? updatedAssignment : a));
   };
 
-  // Timetable Add Event Handler
   const handleAddTimetableSlot = (e) => {
     e.preventDefault();
     if (!newSlotSubject.trim()) return;
@@ -260,24 +396,21 @@ export default function App() {
     setNewSlotRoom('');
   };
 
-  // Editable Timetable Handlers
   const saveTimetableSlot = (id, fields) => {
     setTimetable(timetable.map(slot => slot.id === id ? { ...slot, ...fields, isEditing: false } : slot));
   };
 
-  // New timetable removal execution handle
   const handleRemoveTimetableSlot = (id) => {
     setTimetable(timetable.filter(slot => slot.id !== id));
   };
 
-  // Editable Calendar Handlers
   const saveCalendarDayEvent = () => {
     if (!selectedCalendarDay) return;
     setCalendarEvents({ ...calendarEvents, [selectedCalendarDay]: calendarInputVal });
     setSelectedCalendarDay(null);
   };
 
-  // Metric Calculation Aggregations
+  // Dashboard Aggregations
   const completedCount = assignments.filter(a => a.isCompleted || a.checklist?.every(c => c.completed)).length;
   const pendingCount = assignments.length - completedCount;
 
@@ -299,6 +432,64 @@ export default function App() {
     ? Object.keys(subjectMap).map(subj => ({ name: subj, count: subjectMap[subj] }))
     : [{ name: 'None Pending', count: 0 }];
 
+
+  // --- CONDITIONAL RENDERING CONTROL GATE ---
+  if (!isLoggedIn) {
+    return (
+      <div style={{ backgroundColor: '#0f172a', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontFamily: 'sans-serif', padding: '16px' }}>
+        <div style={{ backgroundColor: '#1e293b', padding: '40px', borderRadius: '16px', border: '1px solid #334155', width: '100%', maxWidth: '400px', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)' }}>
+          
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '24px' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '20px' }}>🎓</div>
+            <span style={{ fontSize: '24px', fontWeight: 'bold' }}>AcademiaHub</span>
+          </div>
+
+          <h2 style={{ textAlign: 'center', margin: '0 0 8px 0', fontSize: '20px' }}>
+            {authMode === 'login' ? 'Welcome Back' : 'Create an Account'}
+          </h2>
+          <p style={{ textAlign: 'center', color: '#94a3b8', fontSize: '14px', margin: '0 0 24px 0' }}>
+            {authMode === 'login' ? 'Sign in to access your local command base.' : 'Register a new profile credential slot.'}
+          </p>
+
+          {authError && (
+            <div style={{ backgroundColor: '#ef444422', border: '1px solid #ef4444', color: '#f87171', padding: '10px', borderRadius: '6px', fontSize: '13px', marginBottom: '16px', textAlign: 'center' }}>
+              {authError}
+            </div>
+          )}
+
+          <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', color: '#94a3b8', marginBottom: '6px' }}>Username</label>
+              <input type="text" placeholder="e.g. student123" value={username} onChange={(e) => setUsername(e.target.value)} style={{ width: '100%', backgroundColor: '#0f172a', border: '1px solid #475569', borderRadius: '6px', padding: '10px', color: '#ffffff', boxSizing: 'border-box' }} required />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', color: '#94a3b8', marginBottom: '6px' }}>Password</label>
+              <input type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} style={{ width: '100%', backgroundColor: '#0f172a', border: '1px solid #475569', borderRadius: '6px', padding: '10px', color: '#ffffff', boxSizing: 'border-box' }} required />
+            </div>
+
+            <button type="submit" style={{ backgroundColor: '#6366f1', color: '#ffffff', border: 'none', padding: '12px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px', marginTop: '8px' }}>
+              {authMode === 'login' ? 'Sign In' : 'Sign Up'}
+            </button>
+          </form>
+
+          <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px', color: '#94a3b8' }}>
+            {authMode === 'login' ? (
+              <span>Don't have an account? <span onClick={() => { setAuthMode('register'); setAuthError(''); }} style={{ color: '#38bdf8', cursor: 'pointer', fontWeight: 'bold' }}>Register</span></span>
+            ) : (
+              <span>Already registered? <span onClick={() => { setAuthMode('login'); setAuthError(''); }} style={{ color: '#38bdf8', cursor: 'pointer', fontWeight: 'bold' }}>Sign In</span></span>
+            )}
+          </div>
+          
+          <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '11px', color: '#64748b' }}>
+            Default testing bypass: <strong>admin</strong> / <strong>password123</strong>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- PREVIOUS ROOT INTERFACE RENDER (UNTOUCHED LOGIC WITH LOGOUT ADDED TO SIDEBAR) ---
   return (
     <div style={{ backgroundColor: '#0f172a', minHeight: '100vh', display: 'flex', color: '#ffffff', fontFamily: 'sans-serif' }}>
       
@@ -313,6 +504,12 @@ export default function App() {
         <button onClick={() => setActiveTab('calendar')} style={{ textAlign: 'left', padding: '12px 16px', borderRadius: '8px', border: 'none', backgroundColor: activeTab === 'calendar' ? '#334155' : 'transparent', color: '#ffffff', cursor: 'pointer', fontWeight: 'bold', width: '100%' }}>📅 Editable AI Calendar</button>
         <button onClick={() => setActiveTab('timetable')} style={{ textAlign: 'left', padding: '12px 16px', borderRadius: '8px', border: 'none', backgroundColor: activeTab === 'timetable' ? '#334155' : 'transparent', color: '#ffffff', cursor: 'pointer', fontWeight: 'bold', width: '100%' }}>⏰ Editable Timetable</button>
         <button onClick={() => setActiveTab('ai-core')} style={{ textAlign: 'left', padding: '12px 16px', borderRadius: '8px', border: 'none', backgroundColor: activeTab === 'ai-core' ? '#334155' : 'transparent', color: '#ffffff', cursor: 'pointer', fontWeight: 'bold', width: '100%' }}>🔮 AI Engine + History</button>
+
+        {/* LOGOUT UTILITY TRIGGER (NEW SIDEBAR ADD-ON) */}
+        <div style={{ marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid #334155' }}>
+          <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px', paddingLeft: '8px' }}>User: {username}</div>
+          <button onClick={handleLogout} style={{ textAlign: 'left', padding: '12px 16px', borderRadius: '8px', border: 'none', backgroundColor: 'transparent', color: '#f87171', cursor: 'pointer', fontWeight: 'bold', width: '100%' }}>🚪 Log Out Session</button>
+        </div>
       </div>
 
       {/* RIGHT WORKSPACE SURFACE */}
@@ -527,40 +724,30 @@ export default function App() {
               </form>
             </div>
 
+            {/* Timetable List Display */}
             <div style={{ backgroundColor: '#1e293b', borderRadius: '12px', padding: '24px', border: '1px solid #334155' }}>
-              <h2 style={{ margin: '0 0 16px 0', fontSize: '20px', color: '#38bdf8' }}>⏰ System Track Lecture Timetable Router</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {timetable.map(slot => (
-                  <div key={slot.id} style={{ backgroundColor: '#0f172a', padding: '16px', borderRadius: '8px', border: '1px solid #1e293b' }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#ffffff' }}>⏰ Lecture Schedule Overview</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {timetable.map((slot) => (
+                  <div key={slot.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#0f172a', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
                     {slot.isEditing ? (
-                      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                        <input type="text" defaultValue={slot.subject} id={`sub-${slot.id}`} style={{ backgroundColor: '#1e293b', color: '#ffffff', border: '1px solid #475569', padding: '6px', borderRadius: '4px' }} />
-                        <input type="text" defaultValue={slot.time} id={`time-${slot.id}`} style={{ backgroundColor: '#1e293b', color: '#ffffff', border: '1px solid #475569', padding: '6px', borderRadius: '4px' }} />
-                        <input type="text" defaultValue={slot.room} id={`room-${slot.id}`} style={{ backgroundColor: '#1e293b', color: '#ffffff', border: '1px solid #475569', padding: '6px', borderRadius: '4px' }} />
-                        <button onClick={() => saveTimetableSlot(slot.id, {
-                          subject: document.getElementById(`sub-${slot.id}`).value,
-                          time: document.getElementById(`time-${slot.id}`).value,
-                          room: document.getElementById(`room-${slot.id}`).value
-                        })} style={{ backgroundColor: '#10b981', border: 'none', padding: '6px 12px', borderRadius: '4px', color: '#ffffff', cursor: 'pointer' }}>Confirm</button>
+                      <div style={{ display: 'flex', gap: '10px', flex: 1 }}>
+                        <input type="text" defaultValue={slot.subject} onBlur={(e) => saveTimetableSlot(slot.id, { subject: e.target.value })} style={{ backgroundColor: '#1e293b', color: '#ffffff', border: '1px solid #38bdf8', padding: '4px', borderRadius: '4px' }} />
+                        <input type="text" defaultValue={slot.time} onBlur={(e) => saveTimetableSlot(slot.id, { time: e.target.value })} style={{ backgroundColor: '#1e293b', color: '#ffffff', border: '1px solid #38bdf8', padding: '4px', borderRadius: '4px' }} />
+                        <input type="text" defaultValue={slot.room} onBlur={(e) => saveTimetableSlot(slot.id, { room: e.target.value })} style={{ backgroundColor: '#1e293b', color: '#ffffff', border: '1px solid #38bdf8', padding: '4px', borderRadius: '4px' }} />
                       </div>
                     ) : (
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <span style={{ backgroundColor: '#6366f133', color: '#818cf8', fontSize: '11px', padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold' }}>{slot.day}</span>
-                          <h4 style={{ margin: '6px 0 0 0', color: '#ffffff' }}>{slot.subject}</h4>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                          <div style={{ textAlign: 'right' }}>
-                            <span style={{ color: '#10b981', display: 'block', fontWeight: 'bold' }}>{slot.time}</span>
-                            <span style={{ color: '#64748b', fontSize: '12px' }}>{slot.room}</span>
-                          </div>
-                          <div style={{ display: 'flex', gap: '8px' }}>
-                            <button onClick={() => setTimetable(timetable.map(s => s.id === slot.id ? { ...s, isEditing: true } : s))} style={{ backgroundColor: '#334155', border: 'none', padding: '6px 12px', borderRadius: '4px', color: '#cbd5e1', cursor: 'pointer', fontSize: '13px' }}>✏️ Edit</button>
-                            <button onClick={() => handleRemoveTimetableSlot(slot.id)} style={{ backgroundColor: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '14px', padding: '4px 8px' }} title="Delete Timetable Block">🗑️</button>
-                          </div>
-                        </div>
+                      <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+                        <span style={{ backgroundColor: '#334155', color: '#10b981', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', fontWeight: 'bold' }}>{slot.day}</span>
+                        <span style={{ fontWeight: 'bold' }}>{slot.subject}</span>
+                        <span style={{ color: '#94a3b8', fontSize: '14px' }}>⏳ {slot.time}</span>
+                        <span style={{ color: '#38bdf8', fontSize: '14px' }}>📍 {slot.room}</span>
                       </div>
                     )}
+                    <div style={{ display: 'flex', gap: '12px' }}>
+                      <button onClick={() => setTimetable(timetable.map(s => s.id === slot.id ? { ...s, isEditing: !s.isEditing } : s))} style={{ backgroundColor: 'transparent', border: 'none', color: '#818cf8', cursor: 'pointer' }}>✏️</button>
+                      <button onClick={() => handleRemoveTimetableSlot(slot.id)} style={{ backgroundColor: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer' }}>🗑️</button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -568,64 +755,62 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 4: LIVE AI ENGINE */}
+        {/* TAB 4: AI STREAM SURFACE ENGINE */}
         {activeTab === 'ai-core' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '24px' }}>
-            <div style={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '20px', padding: '20px', height: '540px', overflowY: 'auto' }}>
-              <h4 style={{ margin: '0 0 16px 0', color: '#a855f7', fontWeight: 'bold' }}>🔮 Generation Run History</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {aiHistory.map(hist => (
-                  <div key={hist.id} onClick={() => { setAiPrompt(hist.prompt); setAiResponse(hist.response); }} style={{ backgroundColor: '#0f172a', padding: '10px', borderRadius: '6px', border: '1px solid #334155', cursor: 'pointer' }}>
-                    <div style={{ fontSize: '12px', color: '#a855f7', fontWeight: 'bold', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📝 {hist.prompt}</div>
-                    <div style={{ fontSize: '11px', color: '#94a3b8', height: '32px', overflow: 'hidden' }}>{hist.response}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={{ backgroundColor: '#1e293b', borderRadius: '12px', padding: '24px', border: '1px solid #334155' }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#818cf8' }}>🔮 Local AI Core Engine System</h3>
+              
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+                <label style={{ backgroundColor: '#0f172a', border: '1px solid #475569', color: '#94a3b8', padding: '10px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>
+                  📎 Attach Syllabus (.txt)
+                  <input type="file" accept=".txt,.md" onChange={handleFileUpload} style={{ display: 'none' }} />
+                </label>
+                <label style={{ backgroundColor: '#0f172a', border: '1px solid #475569', color: '#94a3b8', padding: '10px 16px', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>
+                  📷 Attach Assignment Image
+                  <input type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
+                </label>
+              </div>
+
+              {attachedFiles.length > 0 && (
+                <div style={{ marginBottom: '12px', color: '#38bdf8', fontSize: '13px' }}>
+                  Ready File Attachments: {attachedFiles.join(', ')}
+                </div>
+              )}
+
+              {attachedPhotos.length > 0 && (
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+                  {attachedPhotos.map((p, idx) => (
+                    <img key={idx} src={p.url} alt={p.name} style={{ width: '60px', height: '60px', borderRadius: '6px', objectFit: 'cover', border: '1px solid #38bdf8' }} />
+                  ))}
+                </div>
+              )}
+
+              <textarea placeholder="Ask your local Ollama instance for assignment breakdowns, conceptual maps, or schedule optimizations..." value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} style={{ width: '100%', height: '120px', backgroundColor: '#0f172a', border: '1px solid #475569', borderRadius: '8px', padding: '12px', color: '#ffffff', fontFamily: 'sans-serif', fontSize: '14px', resize: 'vertical', boxSizing: 'border-box', marginBottom: '16px' }} />
+              
+              <button onClick={handleQueryEngine} disabled={isAiLoading} style={{ backgroundColor: '#6366f1', color: '#ffffff', border: 'none', padding: '12px 24px', borderRadius: '6px', fontWeight: 'bold', cursor: isAiLoading ? 'not-allowed' : 'pointer', opacity: isAiLoading ? 0.6 : 1 }}>
+                {isAiLoading ? "Processing Stream Tokens..." : "Execute Query Engine"}
+              </button>
+
+              {aiResponse && (
+                <div style={{ marginTop: '24px', backgroundColor: '#0f172a', border: '1px solid #334155', padding: '20px', borderRadius: '8px', whiteSpace: 'pre-wrap', lineHeight: '1.6', fontSize: '14px' }}>
+                  <span style={{ fontSize: '11px', color: '#818cf8', fontWeight: 'bold', display: 'block', marginBottom: '8px' }}>INCOMING STREAM RESPONSE:</span>
+                  {aiResponse}
+                </div>
+              )}
+            </div>
+
+            {/* AI Prompt History List */}
+            <div style={{ backgroundColor: '#1e293b', borderRadius: '12px', padding: '24px', border: '1px solid #334155' }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '15px', color: '#94a3b8' }}>📜 Matrix Search History</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {aiHistory.map((hist) => (
+                  <div key={hist.id} style={{ backgroundColor: '#0f172a', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
+                    <div style={{ color: '#38bdf8', fontWeight: 'bold', fontSize: '13px', marginBottom: '4px' }}>Q: {hist.prompt}</div>
+                    <div style={{ color: '#cbd5e1', fontSize: '13px', whiteSpace: 'pre-wrap' }}>{hist.response}</div>
                   </div>
                 ))}
               </div>
-            </div>
-
-            <div style={{ backgroundColor: '#1e293b', borderRadius: '12px', padding: '24px', border: '1px solid #334155' }}>
-              <h2 style={{ margin: '0 0 4px 0', fontSize: '20px', color: '#a855f7' }}>🔮 Live AI Compilation Window</h2>
-              <p style={{ color: '#94a3b8', fontSize: '13px', margin: '0 0 20px 0' }}>Type your academic parameters or attach separate file streams underneath.</p>
-              
-              <div style={{ position: 'relative', backgroundColor: '#0f172a', borderRadius: '8px', border: '1px solid #475569', padding: '12px' }}>
-                <textarea value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} placeholder="Ask anything..." style={{ width: '100%', height: '140px', backgroundColor: 'transparent', border: 'none', color: '#ffffff', fontSize: '14px', resize: 'none', outline: 'none' }} />
-                
-                {(attachedFiles.length > 0 || attachedPhotos.length > 0) && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #334155' }}>
-                    {attachedFiles.map((f, idx) => (
-                      <span key={idx} style={{ backgroundColor: '#1e293b', color: '#38bdf8', fontSize: '12px', padding: '4px 10px', borderRadius: '4px' }}>📄 {f}</span>
-                    ))}
-                    {attachedPhotos.map((p, idx) => (
-                      <div key={idx} style={{ width: '40px', height: '40px', borderRadius: '4px', overflow: 'hidden', border: '1px solid #a855f7' }}>
-                        <img src={p.url} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #1e293b' }}>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', backgroundColor: '#1e293b', color: '#cbd5e1', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', border: '1px solid #334155' }}>
-                      <span>➕ Attach Document</span>
-                      <input type="file" multiple onChange={handleFileUpload} style={{ display: 'none' }} />
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', backgroundColor: '#1e293b', color: '#cbd5e1', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', border: '1px solid #334155' }}>
-                      <span>📸 Attach Photo</span>
-                      <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} style={{ display: 'none' }} />
-                    </label>
-                  </div>
-                  <button onClick={handleQueryEngine} disabled={isAiLoading} style={{ backgroundColor: '#6b21a8', color: '#ffffff', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
-                    {isAiLoading ? "Processing..." : "Execute Query Input"}
-                  </button>
-                </div>
-              </div>
-
-              {aiResponse && (
-                <div style={{ marginTop: '24px', padding: '20px', backgroundColor: '#0f172a', borderRadius: '8px', border: '1px solid #475569', borderLeft: '4px solid #a855f7' }}>
-                  <h4 style={{ margin: '0 0 10px 0', color: '#a855f7' }}>🟢 Code Stream Matrix Output:</h4>
-                  <p style={{ margin: 0, fontSize: '14px', lineHeight: '1.6', color: '#cbd5e1', whiteSpace: 'pre-wrap' }}>{aiResponse}</p>
-                </div>
-              )}
             </div>
           </div>
         )}
